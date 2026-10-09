@@ -1,0 +1,5 @@
+services:
+  fastapi_api:
+    build: .
+    ports:
+      - "${APP_PORT}:8092"
