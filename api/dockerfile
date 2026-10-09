@@ -9,4 +9,4 @@ RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
 COPY ./ /code
 
 EXPOSE 3000
-CMD ["fastapi", "run", "app/main.py", "--port", "3000"]
+CMD ["fastapi", "run", "main.py", "--port", "3000"]
