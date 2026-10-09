@@ -1,4 +1,5 @@
 import fastapi
+import asyncio
 import subprocess
 import os
 from fastapi.responses import StreamingResponse
@@ -11,7 +12,9 @@ GIT_ROOT = os.path.expanduser("~/git-server-repos")
 os.makedirs(GIT_ROOT, exist_ok=True)
 
 def get_repo_path(repo_name: str) -> str:
-    path = os.path.join(GIT_ROOT, repo_name)
+    path = os.path.realpath(os.path.join(GIT_ROOT, repo_name))
+    if os.path.dirname(path) != os.path.realpath(GIT_ROOT):
+        raise HTTPException(status_code=400, detail="Neplatný název repozitáře")
     if not os.path.exists(path):
         raise HTTPException(status_code=404, detail="Repozitář nenalezen")
     return path
@@ -40,14 +43,14 @@ async def git_clone_pull(repo_name: str, request: fastapi.Request):
     body = await request.body()
 
     cmd = ["git-upload-pack", "--stateless-rpc", repo_path]
-    process = subprocess.Popen(
-        cmd,
+    process = await asyncio.create_subprocess_exec(
+        *cmd,
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE
     )
 
-    stdout, stderr = process.communicate(input=body)
+    stdout, stderr = await process.communicate(input=body)
     if process.returncode != 0:
         raise HTTPException(status_code=500, detail=f"Git command failed: {stderr.decode()}")
     return fastapi.responses.Response(content=stdout, media_type="application/x-git-upload-pack-result")
@@ -59,14 +62,14 @@ async def git_push(repo_name: str, request: fastapi.Request):
     body = await request.body()
 
     cmd = ["git-receive-pack", "--stateless-rpc", repo_path]
-    process = subprocess.Popen(
-        cmd,
+    process = await asyncio.create_subprocess_exec(
+        *cmd,
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE
     )
 
-    stdout, stderr = process.communicate(input=body)
+    stdout, stderr = await process.communicate(input=body)
     if process.returncode != 0:
         raise HTTPException(status_code=500, detail=f"Git command failed: {stderr.decode()}")
     return fastapi.responses.Response(content=stdout, media_type="application/x-git-receive-pack-result")
