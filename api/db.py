@@ -15,9 +15,24 @@ class Database:
 				username TEXT NOT NULL UNIQUE,
 				password TEXT NOT NULL,
 				role TEXT NOT NULL
+			);
+			CREATE TABLE IF NOT EXISTS repos (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				name TEXT NOT NULL UNIQUE,
+				path TEXT NOT NULL
+				owner INTEGER NOT NULL,
+				FOREIGN KEY (owner) REFERENCES users(id)
 			)
 		''')
 		self.conn.commit()
+
+	def create_repo(self, name, path, owner):
+		try:
+			self.cursor.execute('INSERT INTO repos (name, path, owner) VALUES (?, ?, ?)', (name, path, owner))
+			self.conn.commit()
+			return True
+		except sqlite3.IntegrityError:
+			raise HTTPException(status_code=400, detail="GG BROTHA, REPO ALREADY EXISTS")
 
 	def __create_root_user(self):
 		try:
@@ -25,7 +40,7 @@ class Database:
 			self.conn.commit()
 			return True
 		except sqlite3.IntegrityError:
-			return False
+			raise HTTPException(status_code=400, detail="GG BROTHA, ROOT USER ALREADY EXISTS")
 
 	def add_user(self, username, password, role):
 		if role not in ["admin", "user"]:
@@ -35,7 +50,7 @@ class Database:
 			self.conn.commit()
 			return True
 		except sqlite3.IntegrityError:
-			return False
+			raise HTTPException(status_code=400, detail="GG BROTHA, USER ALREADY EXISTS")
 
 	def get_user(self, username):
 		self.cursor.execute('SELECT * FROM users WHERE username = ?', (username,))
@@ -51,6 +66,8 @@ class Database:
 				return None
 		except sqlite3.Error as e:
 			raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+
 
 
 	def close(self):
