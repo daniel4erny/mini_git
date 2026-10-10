@@ -3,3 +3,8 @@ services:
     build: ./api
     ports:
       - "8092:3000"
+    volumes:
+      - git_data:/data
+
+volumes:
+  git_data:
