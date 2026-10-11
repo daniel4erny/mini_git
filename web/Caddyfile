@@ -1,0 +1,18 @@
+:80 {
+	# git klient (clone/pull/push/create)
+	handle /repos/* {
+		reverse_proxy fastapi_api:3000
+	}
+
+	# API pro frontend, /api se odstraní: /api/web/x -> /web/x
+	handle_path /api/* {
+		reverse_proxy fastapi_api:3000
+	}
+
+	# React build, neznámé cesty spadnou na index.html
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}

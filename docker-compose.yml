@@ -5,6 +5,12 @@ services:
       - "8092:3000"
     volumes:
       - git_data:/data
+  web:
+    build: ./web
+    ports:
+      - "8091:80"
+    depends_on:
+      - fastapi_api
 
 volumes:
   git_data:
