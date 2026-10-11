@@ -2,7 +2,7 @@ import { useEffect } from "react"
 import { useState } from "react"
 
 function App() {
-	const [data, setData] = useState(null)
+	const [data, setData] = useState<{ message: string } | null>(null)
 	useEffect(() => {
 		const fetchData = async () => {
 			const info = await fetch("/api/test")
@@ -13,7 +13,7 @@ function App() {
 	}, [])
 	return (
     <>
-		<p>{data}</p>
+		<p>{data?.message}</p>
 	</>
   )
 }
