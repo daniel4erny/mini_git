@@ -34,6 +34,17 @@ class Database:
 		except sqlite3.IntegrityError:
 			raise HTTPException(status_code=400, detail="GG BROTHA, REPO ALREADY EXISTS")
 
+	def check_ownership(self, repo_name, username):
+		self.cursor.execute('''
+			SELECT u.username FROM users u
+			JOIN repos r ON u.id = r.owner
+			WHERE r.name = ?
+		''', (repo_name,))
+		result = self.cursor.fetchone()
+		if result and result[0] == username:
+			return True
+		return False
+
 	def __create_root_user(self):
 		try:
 			self.cursor.execute('INSERT INTO users (username, password, role) VALUES (?, ?, ?)', ("daniel", "nesnasimgulyho#67", "root"))
