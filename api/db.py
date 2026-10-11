@@ -9,7 +9,7 @@ class Database:
 		self.__create_root_user()
 
 	def __create_tables(self):
-		self.cursor.execute('''
+		self.cursor.executescript('''
 			CREATE TABLE IF NOT EXISTS users (
 				id INTEGER PRIMARY KEY AUTOINCREMENT,
 				username TEXT NOT NULL UNIQUE,
