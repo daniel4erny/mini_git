@@ -19,7 +19,7 @@ class Database:
 			CREATE TABLE IF NOT EXISTS repos (
 				id INTEGER PRIMARY KEY AUTOINCREMENT,
 				name TEXT NOT NULL UNIQUE,
-				path TEXT NOT NULL
+				path TEXT NOT NULL,
 				owner INTEGER NOT NULL,
 				FOREIGN KEY (owner) REFERENCES users(id)
 			)
@@ -44,6 +44,10 @@ class Database:
 		if result and result[0] == username:
 			return True
 		return False
+
+	def list_repos(self):
+		self.cursor.execute('SELECT name, path FROM repos')
+		return self.cursor.fetchall()
 
 	def __create_root_user(self):
 		try:

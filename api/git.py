@@ -1,5 +1,3 @@
-from this import s
-
 import fastapi
 import asyncio
 import subprocess
@@ -95,16 +93,35 @@ async def git_clone_pull(repo_name: str, request: fastapi.Request):
 	return await stream_git(cmd, request, "application/x-git-upload-pack-result")
 
 @router.post("/{repo_name}.git/git-receive-pack")
-async def git_push(repo_name: str, request: fastapi.Request):
+async def git_push(repo_name: str, request: fastapi.Request, user: dict = Depends(get_user_role)):
 	#here we dont make sure the user (TODO - COLLABORATORS) is the owner of the repo
-	credentials= await security(request)
-	if not credentials:
-		raise HTTPException(status_code=401, detail="BROTHA DONT TRY ME", headers={"WWW-Authenticate": 'Basic realm="mini_git"'})
-
-	user: dict = await get_user_role(credentials)
 	if not db.check_ownership(repo_name, user["username"]):
 		raise HTTPException(status_code=403, detail="BROTHA DONT TRY ME")
 
 	repo_path = get_repo_path(repo_name)
 	cmd = ["git-receive-pack", "--stateless-rpc", repo_path]
 	return await stream_git(cmd, request, "application/x-git-receive-pack-result")
+
+@router.post("/{repo_name}.git/create")
+async def create_repo(repo_name: str, request: fastapi.Request):
+	credentials= await security(request)
+	if not credentials:
+		raise HTTPException(status_code=401, detail="BROTHA DONT TRY ME", headers={"WWW-Authenticate": 'Basic realm="mini_git"'})
+
+	user: dict = await get_user_role(credentials)
+	if user["role"] not in ["admin", "root"]:
+		raise HTTPException(status_code=403, detail="BROTHA DONT TRY ME")
+
+	repo_path = os.path.join(GIT_ROOT, repo_name)
+	if os.path.exists(repo_path):
+		raise HTTPException(status_code=400, detail="GG BROTHA, REPO ALREADY EXISTS")
+
+	try:
+		os.makedirs(repo_path)
+		subprocess.run(["git", "init", "--bare"], cwd=repo_path, check=True)
+		owner_id = db.get_user(user["username"])[0]
+		db.create_repo(repo_name, repo_path, owner_id)
+	except Exception as e:
+		raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+
+	return {"message": f"REPO '{repo_name}' created successfully", "path": repo_path, "owner": user["username"]}
