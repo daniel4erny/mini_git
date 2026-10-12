@@ -104,6 +104,8 @@ async def git_push(repo_name: str, request: fastapi.Request, user: dict = Depend
 
 @router.post("/{repo_name}.git/create")
 async def create_repo(repo_name: str, request: fastapi.Request):
+	if repo_name in ("repos", "api"):
+		raise HTTPException(status_code=400, detail="Invalid repo name. BROTHA DONT TRY ME")
 	credentials= await security(request)
 	if not credentials:
 		raise HTTPException(status_code=401, detail="BROTHA DONT TRY ME", headers={"WWW-Authenticate": 'Basic realm="mini_git"'})

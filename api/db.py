@@ -27,6 +27,9 @@ class Database:
 		self.conn.commit()
 
 	def create_repo(self, name, path, owner):
+		if name in ("repos", "api"):
+			raise HTTPException(status_code=400, detail="Invalid repo name.")
+
 		try:
 			self.cursor.execute('INSERT INTO repos (name, path, owner) VALUES (?, ?, ?)', (name, path, owner))
 			self.conn.commit()
