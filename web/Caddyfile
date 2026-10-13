@@ -1,4 +1,9 @@
-:80 {
+{
+	# http -> https přesměrování řešíme sami níž, :80 musí dál obsluhovat LAN
+	auto_https disable_redirects
+}
+
+(app) {
 	# git klient (clone/pull/push/create)
 	handle /repos/* {
 		reverse_proxy fastapi_api:3000
@@ -15,4 +20,20 @@
 		try_files {path} /index.html
 		file_server
 	}
+}
+
+# venku přes https, certifikát z Let's Encrypt
+# ověření jde přes http na veřejném portu 80 (router: 80 -> djt-server:8091)
+homelab.djt-group.com:8443 {
+	import app
+}
+
+# doména přes http -> https, Let's Encrypt challenge vyřídí Caddy sám ještě před tímhle
+http://homelab.djt-group.com {
+	redir https://homelab.djt-group.com:8443{uri} permanent
+}
+
+# LAN přes http (djt-server:8091)
+:80 {
+	import app
 }

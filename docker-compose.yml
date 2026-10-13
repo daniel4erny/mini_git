@@ -11,9 +11,12 @@ services:
     build: ./web
     ports:
       - "8091:80"
-      - "8443:80"
+      - "8443:8443"
+    volumes:
+      - caddy_data:/data
     depends_on:
       - fastapi_api
 
 volumes:
   git_data:
+  caddy_data:
