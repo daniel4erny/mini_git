@@ -1,26 +1,12 @@
 import { useState } from "react"
 import { useEffect } from "react"
-import { useParams } from "react-router"
-
-// {
-//   "repo": "projekt",
-//   "path": "src/utils",
-//   "entries": [
-//     { "name": "helpers.py", "type": "blob", "size": 210 }
-//   ]
-// }
-//
-// {
-//   "repo": "projekt",
-//   "path": "src/main.py",
-//   "binary": false, || true, jestli to je binární soubor nebo ne
-//   "content": "print('ahoj')\n" || null, pokud je binární soubor
-// }
+import { Link, useParams } from "react-router"
+import { api, enc } from "./api"
 
 type Entry = {
 	name : string
 	type : string
-	size : number
+	size : number | null
 }
 
 type Data = {
@@ -29,25 +15,62 @@ type Data = {
 	entries : Entry[]
 }
 
-
+// mini_git / repo / src / utils, poslední část není odkaz
+export function Crumbs({ repo, path } : { repo : string, path : string }) {
+	const parts = path ? path.split("/") : []
+	return (
+		<h2>
+			<Link to="/">mini_git</Link> / <Link to={`/${enc(repo)}`}>{repo}</Link>
+			{parts.map((part, i) => (
+				<span key={i}>
+					{" / "}
+					{i === parts.length - 1 ? part : <Link to={`/${enc(repo)}/tree/${enc(parts.slice(0, i + 1).join("/"))}`}>{part}</Link>}
+				</span>
+			))}
+		</h2>
+	)
+}
 
 export default function RepoPage() {
 	const [data, setData] = useState<Data | null>(null)
-	const [loading, setLoading] = useState(true)
-	const { repoName } = useParams<{ repoName: string }>()
+	const [error, setError] = useState<string | null>(null)
+	const { repoName = "", "*": splat = "" } = useParams()
+	const path = splat.replace(/\/+$/, "")
 
 	useEffect(() => {
-		const fetchData = async () => {
-			res = await fetch(`/repos/${repoName}.git`)
-		}
-		fetchData()
-	}, [])
+		setData(null)
+		setError(null)
+		api<Data>(`/api/web/${enc(repoName)}/tree/${enc(path)}`)
+			.then(setData)
+			.catch(e => setError(e.message))
+	}, [repoName, path])
+
+	const link = (entry : Entry) => {
+		const full = path ? `${path}/${entry.name}` : entry.name
+		return `/${enc(repoName)}/${entry.type === "tree" ? "tree" : "blob"}/${enc(full)}`
+	}
 
 	return (
 		<>
-		<div>
-			(loading && <p>loading...</p>)
-		</div>
+		<Crumbs repo={repoName} path={path} />
+		{!path && <pre>git clone {location.origin}/repos/{repoName}.git</pre>}
+		{error && <p className="error">{error}</p>}
+		{!data && !error && <p>loading...</p>}
+		{data && data.entries.length === 0 && <p>prázdné</p>}
+		{data && data.entries.length > 0 && (
+			<table>
+				<tbody>
+					{data.entries.map(entry => (
+						<tr key={entry.name}>
+							<td>
+								<Link to={link(entry)}>{entry.type === "tree" ? `${entry.name}/` : entry.name}</Link>
+							</td>
+							<td>{entry.size ?? ""}</td>
+						</tr>
+					))}
+				</tbody>
+			</table>
+		)}
 		</>
-  )
+	)
 }

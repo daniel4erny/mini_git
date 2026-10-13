@@ -3,7 +3,7 @@ from fastapi import HTTPException
 
 class Database:
 	def __init__(self, db_name):
-		self.conn = sqlite3.connect(db_name)
+		self.conn = sqlite3.connect(db_name, check_same_thread=False)
 		self.cursor = self.conn.cursor()
 		self.__create_tables()
 		self.__create_root_user()
@@ -49,18 +49,20 @@ class Database:
 		return False
 
 	def list_repos(self):
-		self.cursor.execute('SELECT name, path FROM repos')
-		return self.cursor.fetchall()
+		self.cursor.execute('''
+			SELECT r.name, u.username FROM repos r
+			LEFT JOIN users u ON u.id = r.owner
+			ORDER BY r.name
+		''')
+		return [{"name": name, "owner": owner} for name, owner in self.cursor.fetchall()]
 
 	def __create_root_user(self):
-		try:
-			self.cursor.execute('INSERT INTO users (username, password, role) VALUES (?, ?, ?)', ("daniel", "nesnasimgulyho#67", "root"))
-			self.conn.commit()
-			return True
-		except sqlite3.IntegrityError:
-			raise HTTPException(status_code=400, detail="GG BROTHA, ROOT USER ALREADY EXISTS")
+		self.cursor.execute('INSERT OR IGNORE INTO users (username, password, role) VALUES (?, ?, ?)', ("daniel", "nesnasimgulyho#67", "root"))
+		self.conn.commit()
 
 	def add_user(self, username, password, role):
+		if not username or not password:
+			raise HTTPException(status_code=400, detail="Username and password can't be empty.")
 		if role not in ["admin", "user"]:
 			raise HTTPException(status_code=400, detail="Invalid role. Must be 'admin' or 'user'.")
 		try:
@@ -85,8 +87,44 @@ class Database:
 		except sqlite3.Error as e:
 			raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
+	def list_users(self):
+		self.cursor.execute('''
+			SELECT u.username, u.role, COUNT(r.id) FROM users u
+			LEFT JOIN repos r ON r.owner = u.id
+			GROUP BY u.id
+			ORDER BY u.id
+		''')
+		return [{"username": username, "role": role, "repos": repos} for username, role, repos in self.cursor.fetchall()]
 
+	def __get_editable_user(self, username):
+		user = self.get_user(username)
+		if user is None:
+			raise HTTPException(status_code=404, detail="Uživatel nenalezen")
+		if user[3] == "root":
+			raise HTTPException(status_code=403, detail="BROTHA DONT TRY ME")
+		return user
 
+	def update_user(self, username, password=None, role=None):
+		user = self.__get_editable_user(username)
+		if role is not None and role not in ["admin", "user"]:
+			raise HTTPException(status_code=400, detail="Invalid role. Must be 'admin' or 'user'.")
+		if password is not None and not password:
+			raise HTTPException(status_code=400, detail="Password can't be empty.")
+		if password is not None:
+			self.cursor.execute('UPDATE users SET password = ? WHERE id = ?', (password, user[0]))
+		if role is not None:
+			self.cursor.execute('UPDATE users SET role = ? WHERE id = ?', (role, user[0]))
+		self.conn.commit()
+		return True
+
+	def delete_user(self, username):
+		user = self.__get_editable_user(username)
+		self.cursor.execute('SELECT COUNT(*) FROM repos WHERE owner = ?', (user[0],))
+		if self.cursor.fetchone()[0] > 0:
+			raise HTTPException(status_code=400, detail="GG BROTHA, USER STILL OWNS REPOS")
+		self.cursor.execute('DELETE FROM users WHERE id = ?', (user[0],))
+		self.conn.commit()
+		return True
 
 	def close(self):
 		self.conn.close()
