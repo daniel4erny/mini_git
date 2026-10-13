@@ -53,7 +53,7 @@ export default function RepoPage() {
 	return (
 		<>
 		<Crumbs repo={repoName} path={path} />
-		{!path && <pre>git clone {location.origin}/repos/{repoName}.git</pre>}
+		{!path && <pre>git clone -c http.extraHeader="X-Password: &lt;heslo&gt;" {location.origin}/repos/{repoName}.git</pre>}
 		{error && <p className="error">{error}</p>}
 		{!data && !error && <p>loading...</p>}
 		{data && data.entries.length === 0 && <p>prázdné</p>}

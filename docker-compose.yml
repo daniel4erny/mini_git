@@ -3,6 +3,8 @@ services:
     build: ./api
     ports:
       - "8092:3000"
+    environment:
+      SITE_PASSWORD: ${SITE_PASSWORD:?SITE_PASSWORD missing in .env}
     volumes:
       - git_data:/data
   web:
