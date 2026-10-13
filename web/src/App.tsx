@@ -95,7 +95,7 @@ function App() {
 				</tbody>
 			</table>
 			<form onSubmit={createRepo}>
-				<input value={repoName} onChange={e => setRepoName(e.target.value)} placeholder="nové repo" required />
+				<input value={repoName} onChange={e => setRepoName(e.target.value)} placeholder="nové repo" pattern="[A-Za-z0-9_\-][A-Za-z0-9._\-]*" title="jen a-z 0-9 . _ -" required />
 				<button>vytvořit</button>
 			</form>
 

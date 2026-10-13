@@ -2,6 +2,7 @@ import fastapi
 import asyncio
 import subprocess
 import os
+import re
 import zlib
 from fastapi.responses import StreamingResponse
 from fastapi import APIRouter
@@ -104,8 +105,9 @@ async def git_push(repo_name: str, request: fastapi.Request, user: dict = Depend
 
 @router.post("/{repo_name}.git/create")
 async def create_repo(repo_name: str, request: fastapi.Request):
-	if repo_name in ("repos", "api"):
-		raise HTTPException(status_code=400, detail="Invalid repo name. BROTHA DONT TRY ME")
+	# jen a-z 0-9 . _ -, bez tečky na začátku (".", "..", skryté složky)
+	if repo_name in ("repos", "api") or not re.fullmatch(r"[A-Za-z0-9_-][A-Za-z0-9._-]*", repo_name):
+		raise HTTPException(status_code=400, detail="Invalid repo name, only a-z 0-9 . _ - allowed. BROTHA DONT TRY ME")
 	credentials= await security(request)
 	if not credentials:
 		raise HTTPException(status_code=401, detail="BROTHA DONT TRY ME", headers={"WWW-Authenticate": 'Basic realm="mini_git"'})
