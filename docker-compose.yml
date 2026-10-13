@@ -11,6 +11,7 @@ services:
     build: ./web
     ports:
       - "8091:80"
+      - "8443:80"
     depends_on:
       - fastapi_api
 
